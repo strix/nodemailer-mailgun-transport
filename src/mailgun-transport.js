@@ -122,7 +122,11 @@ MailgunTransport.prototype.send = function (mail, callback) {
         if (typeof attachment.content === 'string') {
           data = Buffer.from(attachment.content, attachment.encoding);
         } else {
-          data = yield resolveContent(mailData.attachments, i);
+          try {
+            data = yield resolveContent(mailData.attachments, i);
+          } catch (err) {
+            reject(err);
+          }
         }
         mailgunAttachment = new self.mailgun.Attachment({
           data: data,

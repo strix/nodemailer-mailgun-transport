@@ -2,6 +2,7 @@
 
 const Mailgun = require('mailgun-js');
 const cons = require('consolidate');
+const co = require('co');
 const packageData = require('../package.json');
 
 const whitelistExact = [
@@ -62,6 +63,11 @@ function MailgunTransport(options) {
 MailgunTransport.prototype.send = function (mail, callback) {
   const self = this
   const mailData = mail.data;
+  const resolveContent = (data, key) => {
+    return new Promise((resolve, reject) => {
+      mail.resolveContent(data, key, (e, c) => e ? reject(e) : resolve(c))
+    });
+  }
   const resolveTemplate = () => {
     return new Promise((resolve, reject) => {
       if (mailData.template && mailData.template.name && mailData.template.engine) {
@@ -107,16 +113,16 @@ MailgunTransport.prototype.send = function (mail, callback) {
       }
     }
   };
-  const resolveAttachments = () => {
+  const resolveAttachments = co.wrap(function * () {
     // convert nodemailer attachments to mailgun-js attachments
     if (mailData.attachments) {
       let mailgunAttachment, data, attachmentList = [], inlineList = [];
-      for (const attachment of mailData.attachments) {
+      for (const [ i, attachment ] of mailData.attachments.entries()) {
         // mailgunjs does not encode content string to a buffer
         if (typeof attachment.content === 'string') {
           data = Buffer.from(attachment.content, attachment.encoding);
         } else {
-          data = attachment.content || attachment.path || undefined;
+          data = yield resolveContent(mailData.attachments, i);
         }
         mailgunAttachment = new self.mailgun.Attachment({
           data: data,
@@ -136,7 +142,7 @@ MailgunTransport.prototype.send = function (mail, callback) {
       mailData.inline = inlineList;
       delete mailData.attachments;
     }
-  };
+  });
   const transformMailData = () => {
     delete mailData.headers;
 
@@ -169,8 +175,8 @@ MailgunTransport.prototype.send = function (mail, callback) {
   };
   convertAddressesToStrings();
   transformMailData();
-  resolveAttachments();
   resolveTemplate()
+    .then(resolveAttachments)
     .then(sendMail)
     .then((data) => {
       callback(null, data);

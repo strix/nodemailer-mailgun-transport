@@ -33,6 +33,7 @@
   ],
   "homepage": "http://mailgun.com",
   "dependencies": {
+    "co": "^4.6.0",
     "consolidate": "^0.14.0",
     "mailgun-js": "^0.18.0"
   },

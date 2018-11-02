@@ -65,9 +65,9 @@ MailgunTransport.prototype.send = function (mail, callback) {
   const mailData = mail.data;
   const resolveContent = (data, key) => {
     return new Promise((resolve, reject) => {
-      mail.resolveContent(data, key, (e, c) => e ? reject(e) : resolve(c))
+      mail.resolveContent(data, key, (e, c) => e ? reject(e) : resolve(c));
     });
-  }
+  };
   const resolveTemplate = () => {
     return new Promise((resolve, reject) => {
       if (mailData.template && mailData.template.name && mailData.template.engine) {
